@@ -2,102 +2,111 @@ import React, { useState, useMemo } from "react";
 import {
   FaClipboardList,
   FaHourglassHalf,
-  FaFire,
   FaCheckCircle,
   FaBoxOpen,
-  FaBoxes,
-  FaHistory,
+  FaReceipt,
+  FaArrowRight,
+  FaUserGraduate,
+  FaClock,
 } from "react-icons/fa";
-import { staffOrders, foodAvailabilityList } from "../data/mockData";
+import { useAppContext } from "../context/AppContext";
 
-const STATUS_OPTIONS = ["Pending", "Preparing", "Ready", "Completed"];
+// Filter tab definitions — "All" plus each pickup status.
+const FILTERS = ["All", "Pending", "Ready", "Delivered"];
 
-const getStatusBadgeClass = (status) => {
+// Maps pickupStatus to the badge class used across the app
+// (same classes already used on StudentDashboard/Orders/Receipt).
+const pickupBadgeClass = (status) => {
   switch (status) {
-    case "Pending":
-      return "staff-badge-pending";
-    case "Preparing":
-      return "staff-badge-preparing";
     case "Ready":
-      return "staff-badge-ready";
-    case "Completed":
-      return "staff-badge-completed";
+      return "staff-status-badge staff-badge-ready";
+    case "Delivered":
+      return "staff-status-badge staff-badge-completed";
+    case "Pending":
     default:
-      return "";
+      return "staff-status-badge staff-badge-pending";
   }
 };
 
-const StaffDashboard = () => {
-  const [orders, setOrders] = useState(staffOrders);
-  const [foodItems, setFoodItems] = useState(foodAvailabilityList);
-  const [activityLog, setActivityLog] = useState([
-    "Dashboard initialized for today's shift",
-  ]);
+const paymentBadgeClass = (status) =>
+  status === "Paid" ? "receipt-status-badge receipt-badge-paid" : "receipt-status-badge receipt-badge-pending";
 
-  /* ---------------- Derived Stats ---------------- */
+// Pending -> Ready -> Delivered. Delivered has no further step.
+const nextStatus = {
+  Pending: "Ready",
+  Ready: "Delivered",
+};
+
+const formatDateTime = (isoString) => {
+  if (!isoString) return "—";
+  const d = new Date(isoString);
+  return (
+    d.toLocaleDateString(undefined, { day: "numeric", month: "short" }) +
+    ", " +
+    d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+  );
+};
+
+const itemsSummary = (items) =>
+  items.map((item) => `${item.name} ×${item.quantity}`).join(", ");
+
+/**
+ * Staff Order Management Dashboard
+ *
+ * Reads `orders` straight from AppContext (persisted to localStorage
+ * by AppContext itself) — no local order state here, so this view is
+ * always in sync with whatever students place via Payment.jsx and
+ * whatever any other staff view might change.
+ */
+const StaffDashboard = () => {
+  const { orders, updatePickupStatus } = useAppContext();
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [advancingId, setAdvancingId] = useState(null);
+
+  // ----- Live stats derived from context orders (never drifts out of
+  // sync since there's no separate local copy to forget to update) -----
   const stats = useMemo(() => {
     return {
-      totalOrders: orders.length,
-      pendingOrders: orders.filter((o) => o.status === "Pending").length,
-      preparingOrders: orders.filter((o) => o.status === "Preparing").length,
-      completedOrders: orders.filter((o) => o.status === "Completed").length,
+      total: orders.length,
+      pending: orders.filter((o) => o.pickupStatus === "Pending").length,
+      ready: orders.filter((o) => o.pickupStatus === "Ready").length,
+      delivered: orders.filter((o) => o.pickupStatus === "Delivered").length,
     };
   }, [orders]);
 
-  const availableCount = useMemo(
-    () => foodItems.filter((f) => f.available).length,
-    [foodItems]
-  );
-  const unavailableCount = foodItems.length - availableCount;
+  const filteredOrders = useMemo(() => {
+    if (activeFilter === "All") return orders;
+    return orders.filter((o) => o.pickupStatus === activeFilter);
+  }, [orders, activeFilter]);
 
-  /* ---------------- Activity Logging ---------------- */
-  const logActivity = (message) => {
-    setActivityLog((prev) => [message, ...prev].slice(0, 5));
-  };
+  const handleAdvanceStatus = (order) => {
+    const next = nextStatus[order.pickupStatus];
+    if (!next) return; // already Delivered — no further action
 
-  /* ---------------- Handlers ---------------- */
-  const handleStatusChange = (orderId, newStatus) => {
-    setOrders((prev) =>
-      prev.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
-    logActivity(`Order #${orderId} marked as ${newStatus}`);
-  };
+    setAdvancingId(order.orderId);
+    updatePickupStatus(order.orderId, next);
 
-  const handleToggleAvailability = (foodId) => {
-    setFoodItems((prev) =>
-      prev.map((food) => {
-        if (food.id !== foodId) return food;
-
-        const updated = { ...food, available: !food.available };
-        logActivity(
-          `${updated.name} marked as ${
-            updated.available ? "Available" : "Unavailable"
-          }`
-        );
-        return updated;
-      })
-    );
+    // Brief visual settle so the button doesn't feel like it silently
+    // did nothing on fast re-renders.
+    setTimeout(() => setAdvancingId(null), 300);
   };
 
   return (
     <div className="staff-dashboard">
-      {/* ===== Header ===== */}
       <div className="staff-header">
-        <h1>Staff Dashboard</h1>
-        <p>Manage orders and food availability in real time.</p>
+        <h1>Staff Order Management</h1>
+        <p>Track incoming orders and move them through pickup</p>
       </div>
 
-      {/* ===== Statistics Overview ===== */}
+      {/* ----- Stats Overview ----- */}
       <div className="staff-stats-grid">
         <div className="staff-stat-card">
           <div className="staff-stat-icon staff-icon-total">
             <FaClipboardList />
           </div>
           <div>
-            <p className="staff-stat-value">{stats.totalOrders}</p>
-            <p className="staff-stat-label">Total Orders Today</p>
+            <div className="staff-stat-value">{stats.total}</div>
+            <div className="staff-stat-label">Total Orders</div>
           </div>
         </div>
 
@@ -106,18 +115,18 @@ const StaffDashboard = () => {
             <FaHourglassHalf />
           </div>
           <div>
-            <p className="staff-stat-value">{stats.pendingOrders}</p>
-            <p className="staff-stat-label">Pending Orders</p>
+            <div className="staff-stat-value">{stats.pending}</div>
+            <div className="staff-stat-label">Pending</div>
           </div>
         </div>
 
         <div className="staff-stat-card">
           <div className="staff-stat-icon staff-icon-preparing">
-            <FaFire />
+            <FaBoxOpen />
           </div>
           <div>
-            <p className="staff-stat-value">{stats.preparingOrders}</p>
-            <p className="staff-stat-label">Preparing Orders</p>
+            <div className="staff-stat-value">{stats.ready}</div>
+            <div className="staff-stat-label">Ready for Pickup</div>
           </div>
         </div>
 
@@ -126,150 +135,116 @@ const StaffDashboard = () => {
             <FaCheckCircle />
           </div>
           <div>
-            <p className="staff-stat-value">{stats.completedOrders}</p>
-            <p className="staff-stat-label">Completed Orders</p>
+            <div className="staff-stat-value">{stats.delivered}</div>
+            <div className="staff-stat-label">Delivered</div>
           </div>
         </div>
       </div>
 
-      <div className="staff-main-layout">
-        <div className="staff-main-col">
-          {/* ===== Order Management ===== */}
-          <section className="staff-section">
-            <h2 className="staff-section-title">Order Management</h2>
-
-            <div className="staff-table-wrapper">
-              <table className="staff-orders-table">
-                <thead>
-                  <tr>
-                    <th>Order ID</th>
-                    <th>Student</th>
-                    <th>Item</th>
-                    <th>Qty</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((order) => (
-                    <tr key={order.id}>
-                      <td>#{order.id}</td>
-                      <td>{order.student}</td>
-                      <td>{order.item}</td>
-                      <td>{order.quantity}</td>
-                      <td>
-                        <div className="staff-status-cell">
-                          <span
-                            className={`staff-status-badge ${getStatusBadgeClass(
-                              order.status
-                            )}`}
-                          >
-                            {order.status}
-                          </span>
-                          <select
-                            className="staff-status-select"
-                            value={order.status}
-                            onChange={(e) =>
-                              handleStatusChange(order.id, e.target.value)
-                            }
-                            aria-label={`Update status for order ${order.id}`}
-                          >
-                            {STATUS_OPTIONS.map((status) => (
-                              <option key={status} value={status}>
-                                {status}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {/* ===== Food Availability ===== */}
-          <section className="staff-section">
-            <h2 className="staff-section-title">Food Availability</h2>
-
-            <div className="staff-food-list">
-              {foodItems.map((food) => (
-                <div key={food.id} className="staff-food-row">
-                  <span className="staff-food-name">{food.name}</span>
-
-                  <button
-                    className={`staff-toggle-btn ${
-                      food.available
-                        ? "staff-toggle-available"
-                        : "staff-toggle-unavailable"
-                    }`}
-                    onClick={() => handleToggleAvailability(food.id)}
-                    aria-pressed={food.available}
-                  >
-                    <span className="staff-toggle-track">
-                      <span className="staff-toggle-thumb"></span>
-                    </span>
-                    {food.available ? "Available" : "Unavailable"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        <div className="staff-side-col">
-          {/* ===== Inventory Summary ===== */}
-          <section className="staff-section">
-            <h2 className="staff-section-title">Inventory Summary</h2>
-
-            <div className="staff-inventory-card">
-              <div className="staff-inventory-row">
-                <div className="staff-inventory-icon staff-icon-available">
-                  <FaBoxOpen />
-                </div>
-                <div>
-                  <p className="staff-inventory-value">{availableCount}</p>
-                  <p className="staff-inventory-label">Available Items</p>
-                </div>
-              </div>
-
-              <div className="staff-inventory-divider"></div>
-
-              <div className="staff-inventory-row">
-                <div className="staff-inventory-icon staff-icon-unavailable">
-                  <FaBoxes />
-                </div>
-                <div>
-                  <p className="staff-inventory-value">{unavailableCount}</p>
-                  <p className="staff-inventory-label">Unavailable Items</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* ===== Recent Activity ===== */}
-          <section className="staff-section">
-            <h2 className="staff-section-title">
-              <FaHistory className="staff-activity-title-icon" /> Recent
-              Activity
-            </h2>
-
-            <div className="staff-activity-panel">
-              {activityLog.length > 0 ? (
-                <ul className="staff-activity-list">
-                  {activityLog.map((entry, idx) => (
-                    <li key={idx} className="staff-activity-item">
-                      {entry}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="staff-activity-empty">No recent activity yet.</p>
-              )}
-            </div>
-          </section>
-        </div>
+      {/* ----- Filter Tabs ----- */}
+      <div className="staff-filter-tabs">
+        {FILTERS.map((filter) => (
+          <button
+            key={filter}
+            className={`staff-filter-tab ${
+              activeFilter === filter ? "staff-filter-tab-active" : ""
+            }`}
+            onClick={() => setActiveFilter(filter)}
+          >
+            {filter}
+            {filter !== "All" && (
+              <span className="staff-filter-count">
+                {orders.filter((o) => o.pickupStatus === filter).length}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
+
+      {/* ----- Orders Table ----- */}
+      {filteredOrders.length === 0 ? (
+        <div className="staff-orders-empty-state">
+          <FaReceipt className="staff-orders-empty-icon" />
+          <h3>No {activeFilter !== "All" ? activeFilter.toLowerCase() : ""} orders</h3>
+          <p>
+            {activeFilter === "All"
+              ? "Orders placed by students will show up here."
+              : `There are no orders currently marked "${activeFilter}".`}
+          </p>
+        </div>
+      ) : (
+        <div className="staff-table-wrapper">
+          <table className="staff-orders-table staff-orders-table-wide">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Student</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Payment</th>
+                <th>Pickup Status</th>
+                <th>Order Time</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredOrders.map((order) => {
+                const next = nextStatus[order.pickupStatus];
+
+                return (
+                  <tr key={order.orderId}>
+                    <td>
+                      <div className="staff-order-id-cell">
+                        <FaReceipt className="staff-order-id-icon" />
+                        {order.orderId}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="staff-student-cell">
+                        <FaUserGraduate className="staff-student-icon" />
+                        {order.studentName}
+                      </div>
+                    </td>
+                    <td className="staff-items-cell">{itemsSummary(order.items)}</td>
+                    <td className="staff-total-cell">₹{order.totalAmount}</td>
+                    <td>
+                      <span className={paymentBadgeClass(order.paymentStatus)}>
+                        {order.paymentStatus}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={pickupBadgeClass(order.pickupStatus)}>
+                        {order.pickupStatus}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="staff-order-time-cell">
+                        <FaClock className="staff-order-time-icon" />
+                        {formatDateTime(order.placedAt)}
+                      </div>
+                    </td>
+                    <td>
+                      {next ? (
+                        <button
+                          className={`staff-advance-btn staff-advance-to-${next.toLowerCase()}`}
+                          onClick={() => handleAdvanceStatus(order)}
+                          disabled={advancingId === order.orderId}
+                        >
+                          Mark {next} <FaArrowRight />
+                        </button>
+                      ) : (
+                        <span className="staff-completed-label">
+                          <FaCheckCircle /> Completed
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,39 +1,46 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FaMinus, FaPlus, FaTrash, FaShoppingBasket } from "react-icons/fa";
+import { FaMinus, FaPlus, FaTrash, FaShoppingBag, FaUtensils } from "react-icons/fa";
 import { useAppContext } from "../context/AppContext";
 
+/**
+ * Cart page — the step BEFORE Payment.
+ * The only job this page has in the order flow is:
+ *   1. Show what's in the cart (from AppContext, not local state)
+ *   2. On "Proceed to Payment", navigate("/payment")
+ * It does NOT call placeOrder() — that only happens in Payment.jsx.
+ */
 const Cart = () => {
-  const navigate = useNavigate();
   const {
     cart,
     increaseQuantity,
     decreaseQuantity,
     removeFromCart,
-    clearCart,
     subtotal,
     platformFee,
     grandTotal,
   } = useAppContext();
 
-  const handlePlaceOrder = () => {
-    alert("Order placed successfully!");
-    clearCart();
-    navigate("/student");
+  const navigate = useNavigate();
+
+  const handleProceedToPayment = () => {
+    console.log("[Cart] Proceeding to payment with cart:", cart);
+    if (cart.length === 0) {
+      console.warn("[Cart] Cart is empty — should not be able to reach this point.");
+      return;
+    }
+    navigate("/payment");
   };
 
   if (cart.length === 0) {
     return (
       <div className="cart-empty-page">
         <div className="cart-empty-state">
-          <FaShoppingBasket className="cart-empty-icon" />
-          <h2>Your cart is empty.</h2>
-          <p>Browse the menu and add some delicious food.</p>
-          <button
-            className="btn btn-primary"
-            onClick={() => navigate("/menu")}
-          >
-            Go to Menu
+          <FaShoppingBag className="cart-empty-icon" />
+          <h2>Your cart is empty</h2>
+          <p>Looks like you haven't added anything yet. Browse the menu to get started.</p>
+          <button className="btn btn-primary" onClick={() => navigate("/menu")}>
+            <FaUtensils /> Browse Menu
           </button>
         </div>
       </div>
@@ -44,11 +51,11 @@ const Cart = () => {
     <div className="cart-page">
       <div className="cart-header">
         <h1>Your Cart</h1>
-        <p>Review your items before checking out.</p>
+        <p>Review your items before checking out</p>
       </div>
 
       <div className="cart-layout">
-        {/* ===== Cart Table ===== */}
+        {/* ----- Cart Table ----- */}
         <div className="cart-table-wrapper">
           <table className="cart-table">
             <thead>
@@ -63,11 +70,11 @@ const Cart = () => {
             <tbody>
               {cart.map((item) => (
                 <tr key={item.id}>
-                  <td className="cart-item-name-cell">
-                    <div className="cart-item-thumb">
-                      {item.name.charAt(0)}
+                  <td>
+                    <div className="cart-item-name-cell">
+                      <span className="cart-item-thumb">{item.name.charAt(0)}</span>
+                      {item.name}
                     </div>
-                    <span>{item.name}</span>
                   </td>
                   <td>₹{item.price}</td>
                   <td>
@@ -89,9 +96,7 @@ const Cart = () => {
                       </button>
                     </div>
                   </td>
-                  <td className="cart-total-cell">
-                    ₹{item.price * item.quantity}
-                  </td>
+                  <td className="cart-total-cell">₹{item.price * item.quantity}</td>
                   <td>
                     <button
                       className="cart-remove-btn"
@@ -107,7 +112,7 @@ const Cart = () => {
           </table>
         </div>
 
-        {/* ===== Order Summary ===== */}
+        {/* ----- Order Summary ----- */}
         <div className="cart-summary-card">
           <h3>Order Summary</h3>
 
@@ -120,7 +125,7 @@ const Cart = () => {
             <span>₹{platformFee}</span>
           </div>
 
-          <div className="cart-summary-divider"></div>
+          <div className="cart-summary-divider" />
 
           <div className="cart-summary-row cart-summary-total">
             <span>Grand Total</span>
@@ -128,14 +133,14 @@ const Cart = () => {
           </div>
 
           <button
-            className="btn btn-primary full-width cart-checkout-btn"
-            onClick={handlePlaceOrder}
+            className="btn btn-primary cart-checkout-btn full-width"
+            onClick={handleProceedToPayment}
           >
-            Place Order
+            Proceed to Payment
           </button>
 
           <button
-            className="btn btn-ghost full-width cart-continue-btn"
+            className="btn btn-ghost cart-continue-btn full-width"
             onClick={() => navigate("/menu")}
           >
             Continue Shopping
