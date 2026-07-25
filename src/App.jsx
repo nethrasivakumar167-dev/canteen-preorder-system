@@ -10,14 +10,16 @@ import Footer from "./components/Footer";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-
+import Profile from "./pages/Profile";
 import Menu from "./pages/Menu";
 import Cart from "./pages/Cart";
 import Payment from "./pages/Payment";
 import Orders from "./pages/Orders";
+import Receipt from "./pages/Receipt";
 import StaffDashboard from "./pages/StaffDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
+import MenuManagement from "./pages/MenuManagement";
 
 /* ---------------------------------------------------
    Helper: read logged-in user from localStorage
@@ -88,11 +90,22 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/menu" element={<Menu />} />
 
+          {/* Protected: All authenticated roles — Profile */}
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoles={["student", "faculty", "staff", "admin"]}
+              />
+            }
+          >
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/receipt/:orderId" element={<Receipt />} />
+          </Route>
+
           {/* Protected: Student & Faculty */}
           <Route
             element={<ProtectedRoute allowedRoles={["student", "faculty"]} />}
           >
-            
             <Route path="/cart" element={<Cart />} />
             <Route path="/payment" element={<Payment />} />
             <Route path="/orders" element={<Orders />} />
@@ -107,6 +120,13 @@ function App() {
           {/* Protected: Admin only */}
           <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
             <Route path="/admin" element={<AdminDashboard />} />
+          </Route>
+
+          {/* Protected: Staff & Admin — Menu Management */}
+          <Route
+            element={<ProtectedRoute allowedRoles={["staff", "admin"]} />}
+          >
+            <Route path="/menu-management" element={<MenuManagement />} />
           </Route>
 
           {/* 404 */}

@@ -101,7 +101,7 @@ const Navbar = () => {
             </li>
             <li>
               <NavLink to="/orders" className={navLinkClass} onClick={closeMobileMenu}>
-                Orders
+                Order History
               </NavLink>
             </li>
             <li>
@@ -113,19 +113,33 @@ const Navbar = () => {
         );
       case "staff":
         return (
-          <li>
-            <NavLink to="/staff" className={navLinkClass} onClick={closeMobileMenu}>
-              Dashboard
-            </NavLink>
-          </li>
+          <>
+            <li>
+              <NavLink to="/staff" className={navLinkClass} onClick={closeMobileMenu}>
+                Dashboard
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/profile" className={navLinkClass} onClick={closeMobileMenu}>
+                Profile
+              </NavLink>
+            </li>
+          </>
         );
       case "admin":
         return (
-          <li>
-            <NavLink to="/admin" className={navLinkClass} onClick={closeMobileMenu}>
-              Dashboard
-            </NavLink>
-          </li>
+          <>
+            <li>
+              <NavLink to="/admin" className={navLinkClass} onClick={closeMobileMenu}>
+                Dashboard
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/profile" className={navLinkClass} onClick={closeMobileMenu}>
+                Profile
+              </NavLink>
+            </li>
+          </>
         );
       default:
         return null;
