@@ -1,10 +1,18 @@
 import React from "react";
 
 const FoodCard = ({ food, onPreOrder }) => {
-  const { name, price, available } = food;
+  const { name, price, available, image, category } = food;
 
   return (
     <div className={`sd-food-card ${!available ? "sd-food-card-disabled" : ""}`}>
+      {/* ----- Food Image ----- */}
+      {image && (
+        <div className="sd-food-image-wrapper">
+          <img src={image} alt={name} className="sd-food-image" loading="lazy" />
+          {category && <span className="sd-food-category-badge">{category}</span>}
+        </div>
+      )}
+
       <div className="sd-food-card-header">
         <h4 className="sd-food-name">{name}</h4>
         <span

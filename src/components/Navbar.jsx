@@ -20,9 +20,7 @@ const Navbar = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const dropdownRef = useRef(null);
-  const mobileMenuRef = useRef(null);
 
-  // Load user from localStorage on mount
   useEffect(() => {
     try {
       const user = JSON.parse(localStorage.getItem("currentUser"));
@@ -33,7 +31,6 @@ const Navbar = () => {
     }
   }, []);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -44,7 +41,6 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Close mobile menu on route change / resize to desktop
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth > 768) setMobileOpen(false);
@@ -65,6 +61,10 @@ const Navbar = () => {
 
   const navLinkClass = ({ isActive }) =>
     isActive ? "nav-link active" : "nav-link";
+
+  const roleLabel = currentUser
+    ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)
+    : "";
 
   const renderRoleLinks = () => {
     if (!currentUser) {
@@ -97,11 +97,14 @@ const Navbar = () => {
             <li>
               <NavLink to="/cart" className={navLinkClass} onClick={closeMobileMenu}>
                 Cart
+                {cartCount > 0 && (
+                  <span className="nav-cart-badge">{cartCount}</span>
+                )}
               </NavLink>
             </li>
             <li>
               <NavLink to="/orders" className={navLinkClass} onClick={closeMobileMenu}>
-                Order History
+                Orders
               </NavLink>
             </li>
             <li>
@@ -120,6 +123,15 @@ const Navbar = () => {
               </NavLink>
             </li>
             <li>
+              <NavLink
+                to="/menu-management"
+                className={navLinkClass}
+                onClick={closeMobileMenu}
+              >
+                Menu Management
+              </NavLink>
+            </li>
+            <li>
               <NavLink to="/profile" className={navLinkClass} onClick={closeMobileMenu}>
                 Profile
               </NavLink>
@@ -132,6 +144,15 @@ const Navbar = () => {
             <li>
               <NavLink to="/admin" className={navLinkClass} onClick={closeMobileMenu}>
                 Dashboard
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/menu-management"
+                className={navLinkClass}
+                onClick={closeMobileMenu}
+              >
+                Menu Management
               </NavLink>
             </li>
             <li>
@@ -152,7 +173,7 @@ const Navbar = () => {
         {/* Brand */}
         <NavLink to="/" className="navbar-brand" aria-label="Smart Canteen Home">
           <FaUtensils className="brand-icon" aria-hidden="true" />
-          <span className="brand-name">Smart Canteen</span>
+          <span className="brand-name">Ctrl+Alt+Eat</span>
         </NavLink>
 
         {/* Desktop Nav Links */}
@@ -170,51 +191,58 @@ const Navbar = () => {
               </NavLink>
             </div>
           ) : (
-            <div className="user-menu" ref={dropdownRef}>
-              <button
-                className="user-menu-trigger"
-                onClick={() => setDropdownOpen((prev) => !prev)}
-                aria-haspopup="true"
-                aria-expanded={dropdownOpen}
-                aria-label="Open user menu"
-              >
-                <FaUserCircle className="avatar-icon" aria-hidden="true" />
-                <span className="user-info">
-                  <span className="user-name">{currentUser.name || "User"}</span>
-                  <span className={`role-badge role-${currentUser.role}`}>
-                    {currentUser.role}
-                  </span>
-                </span>
-                <FaChevronDown
-                  className={`chevron ${dropdownOpen ? "rotated" : ""}`}
-                  aria-hidden="true"
-                />
-              </button>
+            <>
+              {/* Explicit role label, e.g. "Logged in as: Staff" */}
+              <span className="navbar-role-label">
+                Logged in as: <strong>{roleLabel}</strong>
+              </span>
 
-              {dropdownOpen && (
-                <ul className="dropdown-menu" role="menu">
-                  <li role="none">
-                    <NavLink
-                      to="/profile"
-                      className="dropdown-item"
-                      role="menuitem"
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      <FaUser aria-hidden="true" /> Profile
-                    </NavLink>
-                  </li>
-                  <li role="none">
-                    <button
-                      className="dropdown-item logout-btn"
-                      role="menuitem"
-                      onClick={handleLogout}
-                    >
-                      <FaSignOutAlt aria-hidden="true" /> Logout
-                    </button>
-                  </li>
-                </ul>
-              )}
-            </div>
+              <div className="user-menu" ref={dropdownRef}>
+                <button
+                  className="user-menu-trigger"
+                  onClick={() => setDropdownOpen((prev) => !prev)}
+                  aria-haspopup="true"
+                  aria-expanded={dropdownOpen}
+                  aria-label="Open user menu"
+                >
+                  <FaUserCircle className="avatar-icon" aria-hidden="true" />
+                  <span className="user-info">
+                    <span className="user-name">{currentUser.userId || "User"}</span>
+                    <span className={`role-badge role-${currentUser.role}`}>
+                      {currentUser.role}
+                    </span>
+                  </span>
+                  <FaChevronDown
+                    className={`chevron ${dropdownOpen ? "rotated" : ""}`}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {dropdownOpen && (
+                  <ul className="dropdown-menu" role="menu">
+                    <li role="none">
+                      <NavLink
+                        to="/profile"
+                        className="dropdown-item"
+                        role="menuitem"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        <FaUser aria-hidden="true" /> Profile
+                      </NavLink>
+                    </li>
+                    <li role="none">
+                      <button
+                        className="dropdown-item logout-btn"
+                        role="menuitem"
+                        onClick={handleLogout}
+                      >
+                        <FaSignOutAlt aria-hidden="true" /> Logout
+                      </button>
+                    </li>
+                  </ul>
+                )}
+              </div>
+            </>
           )}
         </div>
 
@@ -230,10 +258,7 @@ const Navbar = () => {
       </nav>
 
       {/* Mobile Slide-down Menu */}
-      <div
-        ref={mobileMenuRef}
-        className={`mobile-menu ${mobileOpen ? "open" : ""}`}
-      >
+      <div className={`mobile-menu ${mobileOpen ? "open" : ""}`}>
         <ul className="mobile-nav-links">{renderRoleLinks()}</ul>
 
         <div className="mobile-auth-section">
@@ -259,12 +284,15 @@ const Navbar = () => {
               <div className="mobile-user-header">
                 <FaUserCircle className="avatar-icon" aria-hidden="true" />
                 <div>
-                  <span className="user-name">{currentUser.name || "User"}</span>
+                  <span className="user-name">{currentUser.userId || "User"}</span>
                   <span className={`role-badge role-${currentUser.role}`}>
                     {currentUser.role}
                   </span>
                 </div>
               </div>
+              <p className="navbar-role-label mobile">
+                Logged in as: <strong>{roleLabel}</strong>
+              </p>
               <button className="btn btn-outline full-width" onClick={handleLogout}>
                 <FaSignOutAlt aria-hidden="true" /> Logout
               </button>
